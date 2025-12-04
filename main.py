@@ -6,35 +6,20 @@ app = FastAPI()
 
 DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
 
-async def send_discord_notification(
-    amount_sats: int,
-    memo: str | None,
-    note: str | None
-):
+async def send_discord_notification(amount_sats: int):
     if not DISCORD_WEBHOOK_URL:
         print("DISCORD_WEBHOOK_URL not set")
         return
 
-    # 메모/노트가 없을 경우 기본값
-    memo_text = memo or "없음"
-    note_text = note or "없음"
+    # sat 값을 그대로 쓰고, 앞에 ₿ 붙이고 천 단위 콤마만 추가
+    # 예: 100 -> ₿100 / 10000 -> ₿10,000
+    amount_str = f"₿{amount_sats:,}"
 
     embed = {
         "title": "⚡ 라이트닝 입금 감지",
-        "description": f"**{amount_sats:,} sats** 가 BSL 라이트닝 주소로 입금되었습니다.",
+        "description": f"{amount_str} 가 BSL 라이트닝 주소로 입금되었습니다.",
         "color": 0xF7931A,
-        "fields": [
-            {
-                "name": "메모 (invoice memo)",
-                "value": memo_text,
-                "inline": False
-            },
-            {
-                "name": "송금시 입력한 note",
-                "value": note_text,
-                "inline": False
-            },
-        ]
+        # fields 제거 (메모/노트 안 보여줌)
     }
 
     payload = {
@@ -60,11 +45,12 @@ async def blink_webhook(request: Request):
     if tx.get("settlementCurrency") != "BTC":
         return {"ok": True, "ignored": True}
 
-    amount_sats = int(tx.get("settlementAmount", 0))
+    # settlementAmount 가 문자열일 수도 있어서 안전하게 변환
+    raw_amount = tx.get("settlementAmount", 0)
+    try:
+        amount_sats = int(raw_amount)
+    except (TypeError, ValueError):
+        amount_sats = 0
 
-    # 여기서 실제 필드명을 Blink payload에 맞게 바꿔야 함
-    memo = tx.get("memo")          # 인보이스 메모
-    note = tx.get("note")          # 송금시 note (예시)
-
-    await send_discord_notification(amount_sats, memo, note)
+    await send_discord_notification(amount_sats)
     return {"ok": True}
