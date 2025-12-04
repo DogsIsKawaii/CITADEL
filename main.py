@@ -41,7 +41,7 @@ async def send_discord_notification(amount_sats: int, payment_kind: str):
     # 라이트닝 / 온체인 공통 임베드
     embed = {
         "title": f"⚡ {payment_kind} 입금 감지",
-        "description": f"{amount_str} 가 {payment_kind} 주소로 입금되었습니다.",
+        "description": f"{amount_str} 가 {payment_kind} BSL 주소로 입금되었습니다.",
         "color": 0xF7931A,
     }
 
